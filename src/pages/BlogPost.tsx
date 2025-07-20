@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, ExternalLink, X, ZoomIn } from 'lucide-react';
 import SEO from '../components/SEO';
-import { supabase, type BlogPost as BlogPostType } from '../lib/supabase';
+import { supabase, BlogPost as BlogPostType } from '../lib/supabase';
 
 const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPostType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [modalImageSrc, setModalImageSrc] = useState<string>('');
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -58,6 +60,36 @@ const BlogPost: React.FC = () => {
       </p>
     ));
   };
+
+  const openImageModal = (imageSrc: string) => {
+    setModalImageSrc(imageSrc);
+    setIsImageModalOpen(true);
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setModalImageSrc('');
+    // Restore body scroll
+    document.body.style.overflow = 'unset';
+  };
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isImageModalOpen) {
+        closeImageModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      // Cleanup: restore body scroll if component unmounts with modal open
+      document.body.style.overflow = 'unset';
+    };
+  }, [isImageModalOpen]);
 
   if (loading) {
     return (
@@ -162,11 +194,25 @@ const BlogPost: React.FC = () => {
           {/* Featured Image */}
           {post.image_url && (
             <div className="mb-12">
-              <img
-                src={post.image_url}
-                alt=""
-                className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-xl shadow-lg"
-              />
+              <div 
+                className="relative group cursor-pointer"
+                onClick={() => openImageModal(post.image_url!)}
+              >
+                <img
+                  src={post.image_url}
+                  alt=""
+                  className="w-full max-h-96 object-contain rounded-xl shadow-lg bg-gray-50"
+                />
+                {/* Zoom overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-xl flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-full p-3 shadow-lg">
+                    <ZoomIn size={24} className="text-gray-700" aria-hidden="true" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-2 text-center">
+                Click image to view full size
+              </p>
             </div>
           )}
 
@@ -280,6 +326,33 @@ const BlogPost: React.FC = () => {
           </p>
         </div>
       </section>
+
+      {/* Image Modal */}
+      {isImageModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-7xl max-h-full w-full h-full flex items-center justify-center">
+            {/* Close button */}
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all duration-200"
+              aria-label="Close image"
+            >
+              <X size={24} />
+            </button>
+            
+            {/* Image */}
+            <img
+              src={modalImageSrc}
+              alt="Full size view"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };

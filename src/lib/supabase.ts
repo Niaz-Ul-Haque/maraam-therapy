@@ -61,3 +61,42 @@ export const uploadBlogImage = async (file: File, postId: string): Promise<strin
     return null;
   }
 };
+
+// Extract filename from Supabase storage URL
+export const extractImageFileName = (imageUrl: string): string | null => {
+  try {
+    const urlParts = imageUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    // Remove any query parameters
+    return fileName.split('?')[0];
+  } catch (error) {
+    console.error('Error extracting filename from URL:', error);
+    return null;
+  }
+};
+
+// Delete image from Supabase Storage
+export const deleteBlogImage = async (imageUrl: string): Promise<boolean> => {
+  try {
+    const fileName = extractImageFileName(imageUrl);
+    if (!fileName) {
+      console.error('Could not extract filename from URL:', imageUrl);
+      return false;
+    }
+
+    const { error } = await supabase.storage
+      .from('blog-images')
+      .remove([fileName]);
+
+    if (error) {
+      console.error('Error deleting image from storage:', error);
+      return false;
+    }
+
+    console.log('Image deleted successfully from storage:', fileName);
+    return true;
+  } catch (error) {
+    console.error('Error in deleteBlogImage:', error);
+    return false;
+  }
+};

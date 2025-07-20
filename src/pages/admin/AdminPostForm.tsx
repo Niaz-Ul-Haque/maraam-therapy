@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, Upload, X, AlertCircle, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase, type BlogPost, createSlug, uploadBlogImage } from '../../lib/supabase';
+import { supabase, BlogPost, createSlug, uploadBlogImage, deleteBlogImage } from '../../lib/supabase';
 import SEO from '../../components/SEO';
+import AdminLayout from '../../components/AdminLayout';
 
 interface PostFormData {
   title: string;
@@ -107,6 +108,7 @@ const AdminPostForm: React.FC = () => {
     try {
       const slug = createSlug(data.title);
       let imageUrl = post?.image_url || null;
+      let oldImageUrl = post?.image_url || null;
 
       // Handle image upload
       if (data.image && data.image.length > 0) {
@@ -136,6 +138,14 @@ const AdminPostForm: React.FC = () => {
           console.error('Error updating post:', error);
           setError('Failed to update post');
           return;
+        }
+
+        // If we uploaded a new image and there was an old one, delete the old image
+        if (imageUrl && oldImageUrl && imageUrl !== oldImageUrl) {
+          const oldImageDeleted = await deleteBlogImage(oldImageUrl);
+          if (!oldImageDeleted) {
+            console.warn('Failed to delete old image, but post was updated successfully');
+          }
         }
       } else {
         // Create new post
@@ -182,60 +192,57 @@ const AdminPostForm: React.FC = () => {
         description={isEditing ? 'Edit blog post' : 'Create a new blog post'}
       />
       
-      <div className="min-h-screen bg-stone-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-stone-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center gap-4">
-                <Link
-                  to="/me/admin/dashboard"
-                  className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium transition-colors duration-200"
-                >
-                  <ArrowLeft size={20} aria-hidden="true" />
-                  Back to Dashboard
-                </Link>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                >
-                  <Eye size={20} aria-hidden="true" />
-                  {showPreview ? 'Hide Preview' : 'Show Preview'}
-                </button>
+      <AdminLayout>
+        {/* Header Bar */}
+        <div className="bg-white border-b border-stone-200 px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link
+                to="/me/admin/dashboard"
+                className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium transition-colors duration-200"
+              >
+                <ArrowLeft size={20} aria-hidden="true" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
+              </Link>
+              
+              <div className="border-l border-gray-300 pl-4">
+                <h1 className="text-xl lg:text-2xl font-serif font-bold text-gray-900">
+                  {isEditing ? 'Edit Post' : 'Create New Post'}
+                </h1>
               </div>
             </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors duration-200"
+              >
+                <Eye size={16} aria-hidden="true" />
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </button>
+            </div>
           </div>
-        </header>
+        </div>
 
         {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-serif font-bold text-gray-900">
-              {isEditing ? 'Edit Post' : 'Create New Post'}
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {isEditing ? 'Update your blog post' : 'Share insights and educational content with your readers'}
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-red-700 font-medium">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
+        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="max-w-7xl mx-auto">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-700 font-medium">Error</p>
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Form */}
-            <div className="bg-white rounded-lg shadow-sm border border-stone-200 p-6">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className={`grid gap-6 lg:gap-8 ${showPreview ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Form */}
+              <div className="bg-white rounded-lg shadow-sm border border-stone-200 p-4 lg:p-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Title */}
                 <div>
                   <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
@@ -404,8 +411,9 @@ const AdminPostForm: React.FC = () => {
               </div>
             )}
           </div>
-        </main>
+        </div>
       </div>
+      </AdminLayout>
     </>
   );
 };

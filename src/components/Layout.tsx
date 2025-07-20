@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ScrollToTop from './ScrollToTop';
+import ScrollToTopButton from './ScrollToTopButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -34,6 +36,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-stone-50 mosaic-pattern">
+      {/* Scroll to top on route change */}
+      <ScrollToTop />
+      
       {/* Skip to main content link for accessibility */}
       <a href="#main-content" className="skip-to-main">
         Skip to main content
@@ -239,6 +244,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
       </footer>
+
+      {/* Scroll to top button */}
+      <ScrollToTopButton />
     </div>
   );
 };

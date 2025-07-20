@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, ExternalLink } from 'lucide-react';
 import SEO from '../components/SEO';
-import { supabase, type BlogPost } from '../lib/supabase';
+import { supabase, BlogPost } from '../lib/supabase';
 
 const Blog: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -152,7 +152,7 @@ const Blog: React.FC = () => {
                     <img
                       src={post.image_url}
                       alt=""
-                      className="w-full h-48 object-cover rounded-lg mb-4 group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-48 object-contain rounded-lg mb-4 group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                     />
                   ) : (
                     <div className="w-full h-48 bg-gradient-to-br from-sage-200 to-teal-200 rounded-lg mb-4 flex items-center justify-center">

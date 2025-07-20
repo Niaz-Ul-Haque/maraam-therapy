@@ -72,41 +72,42 @@ const AdminLogin: React.FC = () => {
         description="Admin login for Maraam Haque Therapy website"
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-sage-50 to-stone-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-sage-50 to-stone-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">
           {/* Back to Site Link */}
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium mb-8 transition-colors duration-200"
+            className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium mb-6 lg:mb-8 transition-colors duration-200"
             aria-label="Back to main site"
           >
             <ArrowLeft size={20} aria-hidden="true" />
-            Back to Site
+            <span className="hidden sm:inline">Back to Site</span>
+            <span className="sm:hidden">Back</span>
           </Link>
 
           {/* Login Form */}
-          <div className="bg-white py-8 px-6 shadow-lg rounded-xl border border-stone-200">
-            <div className="text-center mb-8">
+          <div className="bg-white py-6 lg:py-8 px-4 lg:px-6 shadow-lg rounded-xl border border-stone-200">
+            <div className="text-center mb-6 lg:mb-8">
               <div className="w-16 h-16 mx-auto bg-sage-600 rounded-full flex items-center justify-center mb-4">
                 <LogIn size={24} className="text-white" aria-hidden="true" />
               </div>
               
-              <h1 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+              <h1 className="text-xl lg:text-2xl font-serif font-bold text-gray-900 mb-2">
                 Admin Login
               </h1>
               
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm lg:text-base">
                 Sign in to manage blog posts and content
               </p>
             </div>
 
             {loginError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-4 lg:mb-6 p-3 lg:p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-700 text-sm">{loginError}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 lg:space-y-6">
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -116,7 +117,7 @@ const AdminLogin: React.FC = () => {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-sage-500 transition-colors duration-200 ${
+                  className={`w-full px-3 py-2 lg:py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-sage-500 transition-colors duration-200 text-base ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
                   {...register('email', {
@@ -145,7 +146,7 @@ const AdminLogin: React.FC = () => {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-sage-500 transition-colors duration-200 ${
+                    className={`w-full px-3 py-2 lg:py-3 pr-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-sage-500 transition-colors duration-200 text-base ${
                       errors.password ? 'border-red-300' : 'border-gray-300'
                     }`}
                     {...register('password', {
@@ -177,7 +178,7 @@ const AdminLogin: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-sage-600 hover:bg-sage-700 disabled:bg-sage-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 disabled:cursor-not-allowed"
+                className="w-full bg-sage-600 hover:bg-sage-700 disabled:bg-sage-400 text-white font-medium py-3 lg:py-4 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 disabled:cursor-not-allowed text-base"
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center gap-2">
@@ -193,7 +194,7 @@ const AdminLogin: React.FC = () => {
               </button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-4 lg:mt-6 text-center">
               <p className="text-xs text-gray-500">
                 This is a secure admin area. If you don't have access, 
                 please contact the site administrator.

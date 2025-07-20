@@ -2,15 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Calendar, ExternalLink, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase, type BlogPost } from '../../lib/supabase';
+import { supabase, BlogPost, deleteBlogImage } from '../../lib/supabase';
 import SEO from '../../components/SEO';
+import AdminLayout from '../../components/AdminLayout';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModel';
 
 const AdminDashboard: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchPosts();
@@ -38,33 +43,70 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleDelete = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
     if (deleteConfirm !== postId) {
+      // First click - show confirm state
       setDeleteConfirm(postId);
       return;
     }
 
+    // Second click - open modal for final confirmation
+    setPostToDelete(post);
+    setDeleteModalOpen(true);
+    setDeleteConfirm(null); // Reset the confirm state
+  };
+
+  const confirmDelete = async () => {
+    if (!postToDelete) return;
+
+    setIsDeleting(true);
+    setError(null);
+
     try {
-      const { error } = await supabase
+      // Step 1: Delete the image from storage if it exists
+      if (postToDelete.image_url) {
+        const imageDeleted = await deleteBlogImage(postToDelete.image_url);
+        if (!imageDeleted) {
+          console.warn('Failed to delete image, but continuing with post deletion');
+        }
+      }
+
+      // Step 2: Delete the post from database
+      const { error: postError } = await supabase
         .from('posts')
         .delete()
-        .eq('id', postId);
+        .eq('id', postToDelete.id);
 
-      if (error) {
-        console.error('Error deleting post:', error);
-        setError('Failed to delete post');
-      } else {
-        setPosts(posts.filter(post => post.id !== postId));
-        setDeleteConfirm(null);
+      if (postError) {
+        console.error('Error deleting post:', postError);
+        setError('Failed to delete post from database');
+        return;
       }
+
+      // Step 3: Update local state
+      setPosts(posts.filter(post => post.id !== postToDelete.id));
+      
+      // Close modal and reset states
+      setDeleteModalOpen(false);
+      setPostToDelete(null);
+      
     } catch (error) {
-      console.error('Error in handleDelete:', error);
-      setError('Failed to delete post');
+      console.error('Error in confirmDelete:', error);
+      setError('An unexpected error occurred while deleting the post');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setPostToDelete(null);
+    setDeleteConfirm(null);
   };
+
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-CA', {
@@ -83,44 +125,14 @@ const AdminDashboard: React.FC = () => {
         description="Admin dashboard for managing blog posts"
       />
       
-      <div className="min-h-screen bg-stone-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-stone-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center gap-4">
-                <Link
-                  to="/"
-                  className="text-xl font-serif font-semibold text-sage-700 hover:text-sage-800 transition-colors duration-200"
-                >
-                  Maraam Haque
-                </Link>
-                <span className="text-gray-400">|</span>
-                <span className="text-gray-600">Admin Dashboard</span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  Welcome, {user?.email}
-                </span>
-                <button
-                  onClick={handleSignOut}
-                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                >
-                  Sign Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
+      <AdminLayout>
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Page Header */}
-          <div className="mb-8">
+          <div className="mb-6 lg:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-serif font-bold text-gray-900">
+                <h1 className="text-2xl lg:text-3xl font-serif font-bold text-gray-900">
                   Blog Posts
                 </h1>
                 <p className="text-gray-600 mt-1">
@@ -130,7 +142,7 @@ const AdminDashboard: React.FC = () => {
               
               <Link
                 to="/me/admin/create"
-                className="btn-primary inline-flex items-center gap-2"
+                className="btn-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Plus size={20} aria-hidden="true" />
                 Create New Post
@@ -153,8 +165,8 @@ const AdminDashboard: React.FC = () => {
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border border-stone-200 p-6 animate-pulse">
-                  <div className="flex items-center justify-between">
+                <div key={i} className="bg-white rounded-lg shadow-sm border border-stone-200 p-4 lg:p-6 animate-pulse">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="h-6 bg-stone-200 rounded w-3/4 mb-2"></div>
                       <div className="h-4 bg-stone-200 rounded w-1/2"></div>
@@ -193,36 +205,36 @@ const AdminDashboard: React.FC = () => {
               {posts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white rounded-lg shadow-sm border border-stone-200 p-6 hover:shadow-md transition-shadow duration-200"
+                  className="bg-white rounded-lg shadow-sm border border-stone-200 p-4 lg:p-6 hover:shadow-md transition-shadow duration-200"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-2 truncate">
+                          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-2 break-words">
                             {post.title}
                           </h3>
                           
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 mb-3">
                             <div className="flex items-center gap-1">
                               <Calendar size={16} aria-hidden="true" />
                               <span>{formatDate(post.created_at)}</span>
                             </div>
                             
-                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-400 hidden sm:inline">•</span>
                             
                             <a
                               href={`/blog/${post.slug}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-sage-600 hover:text-sage-700 transition-colors duration-200"
+                              className="flex items-center gap-1 text-sage-600 hover:text-sage-700 transition-colors duration-200 w-fit"
                             >
                               <ExternalLink size={16} aria-hidden="true" />
                               <span>View Live</span>
                             </a>
                           </div>
                           
-                          <p className="text-gray-700 text-sm line-clamp-2">
+                          <p className="text-gray-700 text-sm line-clamp-2 break-words">
                             {post.content.substring(0, 150)}...
                           </p>
                         </div>
@@ -231,20 +243,20 @@ const AdminDashboard: React.FC = () => {
                           <img
                             src={post.image_url}
                             alt=""
-                            className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                            className="w-full sm:w-20 lg:w-16 h-32 sm:h-20 lg:h-16 object-contain rounded-lg flex-shrink-0 bg-gray-50"
                           />
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Link
                         to={`/me/admin/edit/${post.id}`}
                         className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-sage-600 hover:text-sage-700 hover:bg-sage-50 rounded-md transition-colors duration-200"
                         aria-label={`Edit ${post.title}`}
                       >
                         <Edit size={16} aria-hidden="true" />
-                        <span className="hidden sm:inline">Edit</span>
+                        <span>Edit</span>
                       </Link>
                       
                       <button
@@ -257,7 +269,7 @@ const AdminDashboard: React.FC = () => {
                         aria-label={deleteConfirm === post.id ? `Confirm delete ${post.title}` : `Delete ${post.title}`}
                       >
                         <Trash2 size={16} aria-hidden="true" />
-                        <span className="hidden sm:inline">
+                        <span>
                           {deleteConfirm === post.id ? 'Confirm' : 'Delete'}
                         </span>
                       </button>
@@ -269,7 +281,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           {/* Quick Links */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
             <Link
               to="/blog"
               className="card hover:shadow-lg transition-shadow duration-300 text-center group"
@@ -304,7 +316,7 @@ const AdminDashboard: React.FC = () => {
               href="https://healingpaththerapy.janeapp.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="card hover:shadow-lg transition-shadow duration-300 text-center group"
+              className="card hover:shadow-lg transition-shadow duration-300 text-center group sm:col-span-2 lg:col-span-1"
             >
               <div className="text-terracotta-600 mb-3">
                 <Calendar size={32} className="mx-auto" aria-hidden="true" />
@@ -317,8 +329,17 @@ const AdminDashboard: React.FC = () => {
               </p>
             </a>
           </div>
-        </main>
-      </div>
+        </div>
+      </AdminLayout>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        postTitle={postToDelete?.title || ''}
+        isDeleting={isDeleting}
+      />
     </>
   );
 };

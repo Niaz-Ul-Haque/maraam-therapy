@@ -25,6 +25,11 @@
   .skip-to-main {
     @apply absolute -top-40 left-6 bg-sage-600 text-white px-4 py-2 rounded-md z-50 focus:top-6 transition-all duration-200;
   }
+
+  /* Smooth scrolling for all scroll behavior */
+  * {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer components {

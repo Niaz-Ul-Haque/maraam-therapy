@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Heart, Brain, Shield, ExternalLink } from 'lucide-react';
 import SEO from '../components/SEO';
-import { supabase, type BlogPost } from '../lib/supabase';
+import { supabase, BlogPost } from '../lib/supabase';
 
 const Home: React.FC = () => {
   const [recentPosts, setRecentPosts] = useState<BlogPost[]>([]);
@@ -213,7 +213,7 @@ const Home: React.FC = () => {
                     <img
                       src={post.image_url}
                       alt=""
-                      className="w-full h-48 object-cover rounded-lg mb-4"
+                      className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-50"
                     />
                   )}
                   
